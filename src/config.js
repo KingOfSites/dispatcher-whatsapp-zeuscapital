@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const config = {
-    nextApiBaseUrl: process.env.NEXTJS_API_BASE_URL || "https://seu-crm.com", 
+    nextApiBaseUrl: process.env.NEXTJS_API_BASE_URL || "http://localhost:3000", 
     nextApiToken: process.env.NEXTJS_API_TOKEN || "",
     wppconnectBaseUrl: process.env.WHATSAPP_API_URL
 };
