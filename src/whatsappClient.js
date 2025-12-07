@@ -1,17 +1,24 @@
-const api = require("./apiClient");
+import axios from "axios";
+import { config } from "./config.js";
 
-async function sendMessage(number, message) {
-  try {
-    const res = await api.post("/send-message", {
-      number,
-      message
-    });
+const wa = axios.create({
+    baseURL: config.wppconnectBaseUrl,
+    timeout: 15000,
+});
 
-    console.log(`✔ Mensagem enviada para ${number}`);
-    return res.data;
-  } catch (err) {
-    console.error(`❌ Erro ao enviar para ${number}`, err.message);
-  }
+export async function sendWhatsAppMessage({ contact, message, sessionName }) {
+    console.log(`[WA] Enviando para ${contact} via sessão ${sessionName}`);
+
+    try {
+        const response = await wa.post(`/${sessionName}/send-message`, {
+            phone: contact,
+            message: message,
+        });
+
+        return response.data;
+    } catch (err) {
+        throw new Error(
+            err.response?.data?.message || "Erro ao enviar mensagem"
+        );
+    }
 }
-
-module.exports = { sendMessage };

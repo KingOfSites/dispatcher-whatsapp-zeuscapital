@@ -1,27 +1,56 @@
-const { sendMessage } = require("./whatsappClient");
-const { SEND_DELAY } = require("./config");
+import { 
+    fetchPendingDispatches, 
+    markDispatchSent, 
+    markDispatchFailed 
+} from "./apiClient.js";
 
-// Exemplo: números do banco → troque para sua query real
-async function loadNumbersFromDatabase() {
-  return [
-    "5599999999999",
-    "5588989898989",
-    "5511999998888"
-  ];
-}
+import { sendWhatsAppMessage } from "./whatsappClient.js";
+import { SEND_DELAY } from "./config.js";
 
-async function dispatcher() {
-  const numbers = await loadNumbersFromDatabase();
-  const message = "Olá! Essa é uma mensagem automática 😊";
+const CONTACT_DELAY_MS = 8000;
 
-  console.log(`🚀 Iniciando disparo para ${numbers.length} contatos...`);
+async function processQueue() {
+  try {
+    console.log("🔄 Buscando mensagens pendentes...");
 
-  for (const number of numbers) {
-    await sendMessage(number, message);
-    await new Promise(res => setTimeout(res, SEND_DELAY)); // delay entre envios
+    const pendentes = await fetchPendingDispatches();
+
+    if (!pendentes || pendentes.length === 0) {
+      console.log("⏳ Nenhuma mensagem na fila.");
+      return setTimeout(processQueue, 3000);
+    }
+
+    console.log(`📨 Encontradas ${pendentes.length} mensagens.`);
+
+    for (const job of pendentes) {
+      const { id, contact, message, sessionName } = job;
+
+      console.log(`📤 Enviando para ${contact}: ${message}`);
+
+      try {
+        await sendWhatsAppMessage({ contact, message, sessionName });
+
+        await markDispatchSent(id);
+
+        console.log(`✅ Mensagem enviada para ${contact}`);
+      } catch (err) {
+        console.error("❌ Erro ao enviar:", err.message);
+        await markDispatchFailed(id, err.message);
+      }
+
+      await new Promise((r) => setTimeout(r, SEND_DELAY));
+    }
+
+    await new Promise((r) => setTimeout(r, CONTACT_DELAY_MS));
+    processQueue();
+    
+  } catch (error) {
+    console.error("🔥 Erro geral no dispatcher:", error);
+    setTimeout(processQueue, 5000);
   }
-
-  console.log("✨ Disparo finalizado!");
 }
 
-module.exports = { dispatcher };
+export function startDispatcher() {
+  console.log("🚀 Dispatcher iniciado!");
+  processQueue();
+}
