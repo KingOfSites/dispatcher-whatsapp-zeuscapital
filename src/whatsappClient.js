@@ -4,6 +4,21 @@ import { config } from "./config.js";
 export async function sendWhatsAppMessage({ phone, message, sessionName }) {
     console.log(`[WA] Enviando para ${phone} via sessão ${sessionName}`);
 
+    // Detecta tipo de mensagem para ajustar timeout
+    let messageData = message;
+    if (typeof message === 'string') {
+        try {
+            messageData = JSON.parse(message);
+        } catch {
+            messageData = { type: 'text', text: message };
+        }
+    }
+    
+    const messageType = messageData.type || 'text';
+    const timeout = messageType === 'audio' ? 90000 : // 90s para áudio
+                    messageType === 'video' ? 120000 : // 120s para vídeo
+                    30000; // 30s para texto e outros
+
     try {
         const response = await axios.post(
             `${config.nextApiBaseUrl}/api/whatsapp/send-phone`,
@@ -13,7 +28,7 @@ export async function sendWhatsAppMessage({ phone, message, sessionName }) {
                 sessionName
             },
             {
-                timeout: 20000
+                timeout: timeout
             }
         );
 
