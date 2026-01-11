@@ -17,7 +17,7 @@ export async function sendWhatsAppMessage({ phone, message, sessionName }) {
     const messageType = messageData.type || 'text';
     const timeout = messageType === 'audio' ? 90000 : // 90s para áudio
                     messageType === 'video' ? 120000 : // 120s para vídeo
-                    30000; // 30s para texto e outros
+                    60000; // 60s para texto e outros (aumentado de 30s)
 
     try {
         const response = await axios.post(
@@ -37,10 +37,18 @@ export async function sendWhatsAppMessage({ phone, message, sessionName }) {
     } catch (err) {
         console.error("❌ Erro ao enviar mensagem:", err.response?.data || err.message);
 
-        throw new Error(
-            err.response?.data?.error ||
-            err.response?.data?.message ||
-            "Erro ao enviar mensagem"
-        );
+        // Captura erro detalhado
+        const errorMessage = err.response?.data?.error ||
+                           err.response?.data?.message ||
+                           err.response?.data?.details ||
+                           err.message ||
+                           "Erro desconhecido ao enviar mensagem";
+
+        // Se for timeout, deixa claro na mensagem
+        if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+            throw new Error(`Timeout ao enviar mensagem (${timeout}ms excedido) - A mensagem pode ter sido enviada`);
+        }
+
+        throw new Error(errorMessage);
     }
 }
