@@ -10,6 +10,14 @@ import { SEND_DELAY } from "./config.js";
 const CONTACT_DELAY_MS = 8000;
 
 /**
+ * Gera um delay aleatório entre min e max (em milissegundos)
+ */
+function getRandomDelay(min, max) {
+  if (!min || !max || min === max) return min || max || 0;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
  * Substitui variáveis na mensagem pelos valores do contato
  * Variáveis suportadas: {{nome}}, {{telefone}}, {{email}}, {{empresa}}
  */
@@ -62,8 +70,10 @@ async function processQueue() {
         grouped[key] = {
           contact,
           campaignId,
-          delay: job.delay || 30000,
-          contactDelay: job.contactDelay || 10000,
+          delayMin: job.delayMin || job.delay || 30000,
+          delayMax: job.delayMax || job.delay || 30000,
+          contactDelayMin: job.contactDelayMin || job.contactDelay || 10000,
+          contactDelayMax: job.contactDelayMax || job.contactDelay || 10000,
           messages: [],
         };
       }
@@ -85,7 +95,7 @@ async function processQueue() {
     console.log(`👥 Processando ${groups.length} contatos únicos`);
 
     for (const group of groups) {
-      const { contact, messages, delay, contactDelay } = group;
+      const { contact, messages, delayMin, delayMax, contactDelayMin, contactDelayMax } = group;
       const phone = contact;
 
       if (!phone) {
@@ -101,7 +111,7 @@ async function processQueue() {
       }
 
       console.log(
-        `📱 Processando ${messages.length} mensagens para ${phone} (delay: ${delay}ms entre mensagens)`
+        `📱 Processando ${messages.length} mensagens para ${phone} (delay: ${delayMin}-${delayMax}ms entre mensagens)`
       );
 
       // Busca dados do contato para substituição de variáveis
@@ -201,7 +211,7 @@ async function processQueue() {
 
         // Delay entre mensagens do mesmo contato (exceto na última)
         if (i < messages.length - 1) {
-          const delayMs = delay || SEND_DELAY;
+          const delayMs = getRandomDelay(delayMin, delayMax) || SEND_DELAY;
           console.log(
             `⏳ Aguardando ${delayMs}ms antes da próxima mensagem...`
           );
@@ -210,7 +220,7 @@ async function processQueue() {
       }
 
       // Delay entre contatos diferentes
-      const contactDelayMs = group.contactDelay || CONTACT_DELAY_MS;
+      const contactDelayMs = getRandomDelay(contactDelayMin, contactDelayMax) || CONTACT_DELAY_MS;
       console.log(
         `⏳ Aguardando ${contactDelayMs}ms antes do próximo contato...`
       );
