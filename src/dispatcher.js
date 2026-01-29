@@ -187,11 +187,19 @@ async function processQueue() {
 
         try {
           // Envio para sua rota Next.js → /api/whatsapp/send-phone
-          await sendWhatsAppMessage({
+          const result = await sendWhatsAppMessage({
             phone,
             message: messageData,
             sessionName,
+            dispatchId: id, // 🔒 Passa o ID para verificação de campanha pausada
           });
+
+          // 🔒 Se a mensagem foi pulada por campanha pausada, apenas continua
+          if (result?.skipped === true && result?.reason === "campaign_paused") {
+            // Não marca como sent nem como failed - já foi marcada como "paused" pelo backend
+            // Apenas para de processar mensagens deste contato
+            break;
+          }
 
           await markDispatchSent(id);
 
@@ -205,6 +213,7 @@ async function processQueue() {
             `❌ Erro ao enviar mensagem ${i + 1}/${messages.length}:`,
             err.message
           );
+
           await markDispatchFailed(id, err.message);
           // Continua tentando as próximas mensagens mesmo se uma falhar
         }

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { config } from "./config.js";
 
-export async function sendWhatsAppMessage({ phone, message, sessionName }) {
+export async function sendWhatsAppMessage({ phone, message, sessionName, dispatchId }) {
     console.log(`[WA] Enviando para ${phone} via sessão ${sessionName}`);
 
     // Detecta tipo de mensagem para ajustar timeout
@@ -25,7 +25,8 @@ export async function sendWhatsAppMessage({ phone, message, sessionName }) {
             {
                 phone,
                 message,
-                sessionName
+                sessionName,
+                dispatchId // 🔒 Envia dispatchId para verificação de campanha pausada
             },
             {
                 timeout: timeout
